@@ -209,8 +209,9 @@ calc_stats_cbv <- function(x, y, z) {
   # Splitting into two outputs to deal with non-stat columns
   output <- hf_cbv %>% filter(datetime_round >= y & datetime_round <= x) %>% 
     filter(site == z) %>% # subset that to only relevant site
-    mutate(datetime_og = x) %>% 
-    summarize(across(c(datetime_og, site), first)) # report the first value of a group
+    summarize(datetime_round = first(x), #first pull, datetime stamp and site
+              site = first(site),
+              across(where(is.numeric), mean, na.rm = T)) # now, summarize as means
   
   return(output)
 }
@@ -220,12 +221,44 @@ calc_stats_owc <- function(x, y, z) {
   # Splitting into two outputs to deal with non-stat columns
   output <- hf_owc %>% filter(datetime_round >= y & datetime_round <= x) %>% 
     filter(site == z) %>% # subset that to only relevant site
-    mutate(datetime_og = x) %>% 
-    summarize(across(c(datetime_og, site), first))
+    summarize(datetime_round = first(x), #first pull, datetime stamp and site
+              site = first(site),
+              across(where(is.numeric), mean, na.rm = T)) # now, summarize as means
   
   return(output)
 }
 
 
+calc_stats_cbv_first <- function(x, y, z) {
+  
+  # Splitting into two outputs to deal with non-stat columns
+  output <- hf_cbv %>% filter(datetime_round >= y & datetime_round <= x) %>% 
+    filter(site == z) %>% # subset that to only relevant site
+    summarize(across(.cols = everything(), first)) # now, summarize as means
+  
+  return(output)
+}
+
+calc_stats_owc_first <- function(x, y, z) {
+  
+  # Splitting into two outputs to deal with non-stat columns
+  output <- hf_owc %>% filter(datetime_round >= y & datetime_round <= x) %>% 
+    filter(site == z) %>% # subset that to only relevant site
+    summarize(across(.cols = everything(), first)) # now, summarize as means
+  
+  return(output)
+}
+
+
+
+## Make a little helper function to remove spurious rows added to the end of 
+## the dataset
+
+na_rows <- function(data){
+  data %>% 
+    select(datetime_site) %>% 
+    is.na() %>% 
+    rowSums() > 0
+}
 
 

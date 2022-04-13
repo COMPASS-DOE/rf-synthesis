@@ -11,23 +11,24 @@ bin_rate = "15 min"
 dependents <- c("chla", "nh4", "no3", "po4")
 
 ## Water quality predictors
-wq_predictors <- c("Temp.mean", 
-                   "SpCond.mean", 
-                   "DO_mgl.mean", 
-                   "Depth.mean", 
-                   "pH.mean", 
-                   "Turb.mean", 
-                   "sin_doy")
+wq_predictors <- c("Temp", 
+                   "SpCond", 
+                   "DO_mgl", 
+                   "Depth", 
+                   "pH", 
+                   "Turb", 
+                   "sin_doy", 
+                   "site")
 
 ## Meterological predictors
-met_predictors <- c("ATemp.mean", 
-                    "RH.mean", 
-                    "BP.mean", 
-                    "WSpd.mean", 
-                    "Wdir.mean", 
-                    "TotPAR.mean", 
-                    "TotPrcp.mean", 
-                    "sin_doy")
+met_predictors <- c("ATemp", 
+                    "RH", 
+                    "BP", 
+                    "WSpd", 
+                    "Wdir", 
+                    "TotPAR", 
+                    "sin_doy", 
+                    "site")
 
 ## List of flag columns
 flag_list <- c(0, 4)
@@ -42,7 +43,7 @@ theme_set(theme_bw())
 
 datasets = c("cbv_data", "owc_data")
 model_packages = c("randomForest", "ranger")
-predictors = c("wq_predictors", "all_predictors")
+predictors = c("wq_predictors", "met_predictors", "all_predictors")
 proportion = c(0.7, 0.8, 0.9) #will add more if useful
 m_try = c(2, 3, 4)
 ntree = c(100, 500, 1000)

@@ -39,3 +39,7 @@ vignettes/*.pdf
 .Renviron
 
 **/.DS_Store
+
+writing/
+
+data/created/

@@ -95,29 +95,51 @@
 
 
   #### Combine nutrient and hf data ####
-
+  
     # set up parallel
     future::plan(multisession)
-
+  
     # use calc_stats. functions to combine high frequency data with nutrients
-  tic("combine CBV datasets")
+  tic("combine datasets")
     cbv_combined <- prep_vectors(cbv_nuts, 1) %>% 
       future_pmap(., calc_stats_cbv) %>% 
       bind_rows(.) %>% 
-      full_join(cbv_nuts, ., by = c("datetime_round" = "datetime_og", "site" = "site")) 
-    toc()
-    
+      full_join(cbv_nuts, ., by = c("datetime_round" = "datetime_round", "site" = "site")) %>% 
+      filter(na_rows(.) == FALSE)
+
     owc_combined <- prep_vectors(owc_nuts, 1) %>% 
       future_pmap(., calc_stats_owc) %>% 
       bind_rows(.) %>% 
-      full_join(owc_nuts, ., by = c("datetime_round" = "datetime_round", "site" = "site")) 
+      full_join(owc_nuts, ., by = c("datetime_round" = "datetime_round", "site" = "site")) %>% 
+      filter(na_rows(.) == FALSE)
+toc()
 
+
+# use calc_stats. functions to combine high frequency data with nutrients
+tic("combine 'first' datasets")
+cbv_combined_first <- prep_vectors(cbv_nuts, 1) %>% 
+  future_pmap(., calc_stats_cbv_first) %>% 
+  bind_rows(.) %>% 
+  full_join(cbv_nuts, ., by = c("datetime_round" = "datetime_round", "site" = "site")) %>% 
+  filter(na_rows(.) == FALSE)
+
+owc_combined_first <- prep_vectors(owc_nuts, 1) %>% 
+  future_pmap(., calc_stats_owc_first) %>% 
+  bind_rows(.) %>% 
+  full_join(owc_nuts, ., by = c("datetime_round" = "datetime_round", "site" = "site")) %>% 
+  filter(na_rows(.) == FALSE)
+toc()
 
 # 7. Save data ------------------------------------------------------------
-
+  
   # Write out data for models
-  write_csv(cbv_combined %>% filter(!is.na(datetime_round)), paste0(filepath_out, "cbv_for_models.csv"))
-  write_csv(owc_combined %>% filter(!is.na(datetime_round)), paste0(filepath_out, "owc_for_models.csv"))
+  write_csv(cbv_combined %>% filter(!is.na(datetime_round)) %>% 
+              mutate(sin_doy = sin(yday(lubridate::date(datetime_round)) / (365.25 * pi))) %>% 
+              filter(no3 < 1), 
+            paste0(filepath_out, "cbv_for_models.csv"))
+  write_csv(owc_combined %>% filter(!is.na(datetime_round)) %>% 
+              mutate(sin_doy = sin(yday(lubridate::date(datetime_round)) / (365.25 * pi))), 
+            paste0(filepath_out, "owc_for_models.csv"))
   
   # Write out high-frequency data for use later
   write_csv(hf_cbv %>% filter(datetime_round >= "2002-01-01"), paste0(filepath_out, "cbv_hf_wq.csv"))
