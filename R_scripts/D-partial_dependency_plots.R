@@ -46,44 +46,43 @@ owc_data <- read_csv("data/created/owc_for_models.csv") %>%
 # 3. Set up models for all variables of interest -------------------------------
 
 ## First, create a list of variables to calculate PDPs for
-pdp_var = c("SpCond", "sin_doy")
+pdp_var = c("SpCond", "sin_doy", "Temp")
 
 ## Second, create a modified model_list
-model_list_pdp <- expand_grid(model_list, pdp_var)
+model_list_pdp <- expand_grid(model_list, pdp_var) %>% 
+  filter(predictors == "wq_predictors")
 
+var = "no3"
 
 # 4. Run models ----------------------------------------------------------------
 
-## This function calculates fit and error metrics (R2adj, NSE, MAE)
-## This function calculates feature importance
-calculate_pdp <- function(data = data, 
-                                         predictors = predictors, 
-                                         proportion = proportion, 
-                                         model = model, 
-                                         m_try = m_try, 
-                                         ntree = ntree, 
-                                         model_no = model_no, 
+calculate_pdp_test <- function(data = data,
+                          predictors = predictors,
+                          proportion = proportion,
+                          model = model,
+                          m_try = m_try,
+                          ntree = ntree,
+                          model_no = model_no,
                           pdp_var = pdp_var){
   
   ## Create dataset with columns to be used
-  model_data <- eval(parse(text = data)) %>% 
-    dplyr::select(no3, eval(parse(text = predictors)), datetime_round, site) %>% 
-    #mutate(dep = eval(parse(text = var))) %>% 
+  model_data <- eval(parse(text = data)) %>%
+    dplyr::select({{var}}, eval(parse(text = predictors)), datetime_round, site) %>%
+    mutate(dep = eval(parse(text = var))) %>%
     drop_na()
-
-  ## Calculate stats which will be needed later to un-normalize data
-  mean_x = model_data %>% drop_na() %>% summarize(mean(pdp_var)) %>% pull()
-  sd_x = model_data %>% drop_na() %>% summarize(sd(pdp_var)) %>% pull()
+  
+  mean_x = mean(model_data %>% select(pdp_var) %>% drop_na() %>% pull())
+  sd_x = sd(model_data %>% select(pdp_var) %>% drop_na() %>% pull())
   
   ## Set training/test split
   set.seed(42)
   split_data <- initial_time_split(model_data, prop = proportion)
   
   ## Set up recipe
-  model_recipe <- training(split_data) %>% 
-    dplyr::select(-datetime_round) %>% 
-    recipe(no3 ~ .) %>% 
-    step_integer(site) %>% 
+  model_recipe <- training(split_data) %>%
+    dplyr::select(-datetime_round, -{{var}}) %>%
+    recipe(dep ~ .) %>%
+    step_integer(site) %>%
     step_corr(all_predictors()) %>%
     step_center(all_predictors(), -all_outcomes()) %>%
     step_scale(all_predictors(), -all_outcomes()) %>%
@@ -91,7 +90,7 @@ calculate_pdp <- function(data = data,
   
   ## Set up testing data
   testing_data <- model_recipe %>%
-    bake(testing(split_data)) 
+    bake(testing(split_data))
   
   n_test = nrow(testing_data)
   
@@ -106,49 +105,65 @@ calculate_pdp <- function(data = data,
     set_engine(model) %>%
     set_mode("regression")
   
-  rf_wflow <- workflow() %>% 
-    add_formula(no3 ~ .) %>% 
+  rf_wflow <- workflow() %>%
+    add_formula(dep ~ .) %>%
     add_model(rf_model)
   
-  rf_fit <- rf_wflow %>% 
+  rf_fit <- rf_wflow %>%
     fit(data = training_data)
   
   explainer_rf <- explain_tidymodels(
-    rf_fit, 
-    data = dplyr::select(training_data, -no3), 
+    rf_fit,
+    data = dplyr::select(training_data, -dep),
     y = training_data$dep)
   
-  pdp_rf <- as_tibble(model_profile(explainer_rf, variables = pdp_var)$agr_profiles) %>% 
-    dplyr::rename("no3" = `_yhat_`) %>% 
-    mutate(data = data, 
-           no3 = {{var}},
-           predictors = predictors, 
-           proportion = proportion, 
-           model = model, 
-           m_try = m_try, 
-           ntree = ntree, 
-           n_test = n_test, 
-           model_no = model_no, 
-           mean_x = mean_x, 
+  pdp_rf <- as_tibble(model_profile(explainer_rf, variables = pdp_var)$agr_profiles) %>%
+    dplyr::rename("dep" = `_yhat_`) %>%
+    mutate(data = data,
+           dep = dep,
+           predictors = predictors,
+           proportion = proportion,
+           model = model,
+           m_try = m_try,
+           ntree = ntree,
+           n_test = n_test,
+           model_no = model_no,
+           mean_x = mean_x,
            sd_x = sd_x)
   
   ## This line just shows which model is run (keep track of progress)
   print(paste(model, data , predictors , proportion, m_try, ntree))
   
-  return(fi)
+  return(pdp_rf)
 }
 
-n = 2
+
+n = 10
 tic("run models")
-pdp <- model_list_pdp %>% 
-  slice(1:n) %>% 
-  pmap(calculate_pdp) %>% #pmap applies the function to each row
+pdp_raw <- model_list_pdp %>% 
+  #slice(1:n) %>% 
+  pmap(calculate_pdp_test) %>% #pmap applies the function to each row
   bind_rows() %>% #recombine output into a single dataset 
   mutate(dataset = toupper(substr(data, 1, 3)))
 
-## Write out data
-write_csv(pdp, "data/created/model_pdp_data.csv")
+pdp <- pdp_raw %>% 
+  mutate(x = (`_x_` * sd_x) + mean_x) %>% 
+  mutate(predictor = `_vname_`)
 
+plot_pdp <- function(var, color_var, xlab){
+  pdp %>% 
+    filter(predictor == var) %>% 
+    ggplot(aes(x, dep, group = model_no, color = as.factor({{color_var}}))) + 
+    geom_line() +
+    facet_wrap(~data, scales = "free") + 
+    labs(x = xlab, y = "NO3 (mg/L)", color = "mtry")
+}
+
+plot_grid(plot_pdp("SpCond", m_try, "Sp. Cond (mS/cm)"), 
+          plot_pdp("sin_doy", m_try, "Sine DOY"), 
+          plot_pdp("Temp", m_try, "Temp. (C)"), 
+          ncol = 1)
+ggsave("figures/D-pdps.pdf", width = 6, height = 8)
 
 
 

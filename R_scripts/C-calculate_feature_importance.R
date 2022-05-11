@@ -65,7 +65,7 @@ calculate_feature_importance <- function(data = data,
   
   ## Set up recipe
   model_recipe <- training(split_data) %>% 
-    dplyr::select(-datetime_round) %>% 
+    dplyr::select(-datetime_round, -{{var}}) %>% 
     recipe(dep ~ .) %>% 
     step_integer(site) %>% 
     step_corr(all_predictors()) %>%
@@ -137,7 +137,25 @@ feature_importance <- model_list %>%
 ## Write out data
 write_csv(feature_importance, "data/created/model_feature_importance.csv")
 
+x <- feature_importance %>%
+  group_by(predictor, data, predictor_set) %>% 
+  summarize(median_fi = median(fi), 
+            min_fi = min(fi), 
+            max_fi = max(fi)) 
 
+ggplot(x, aes(x = predictor, y = median_fi, fill = predictor)) + 
+  geom_col(show.legend = F) + 
+  coord_flip() +
+  facet_wrap(data~predictor_set, scales = "free") 
 
+  ggplot(x, 
+       aes(reorder(predictor, -median_fi, sum), fill = predictor)) + 
+  geom_col(aes(y = median_fi), show.legend = F) + 
+  geom_errorbar(aes(ymin = min_fi, ymax = max_fi), width = 0.2) + 
+  labs(x = "Predictor", y = "Feature Importance", title = title) + 
+  scale_x_discrete(limits=rev) + 
+  coord_flip() + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  facet_wrap(~predictor_set)
 
 

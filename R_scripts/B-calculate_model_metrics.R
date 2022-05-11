@@ -45,6 +45,58 @@ owc_data <- read_csv("data/created/owc_for_models.csv") %>%
 
 # 2. Run models ----------------------------------------------------------------
 
+data = model_list$data[1]
+model = model_list$model[1]
+predictors = model_list$predictors[1]
+m_try = model_list$m_try[1]
+ntree = model_list$ntree[1]
+proportion = model_list$proportion[1]
+model_no = model_list$model_no[1]
+
+## Create dataset with columns to be used
+model_data <- eval(parse(text = data)) %>% 
+  dplyr::select({{var}}, eval(parse(text = predictors)), datetime_round, site) %>% 
+  mutate(dep = eval(parse(text = var))) %>% 
+  drop_na()
+
+## Set training/test split
+set.seed(42)
+split_data <- initial_time_split(model_data, prop = proportion)
+
+## Set up recipe
+model_recipe <- training(split_data) %>% 
+  dplyr::select(-datetime_round, -{{var}}) %>% 
+  recipe(dep ~ .) %>% 
+  step_integer(site) %>% 
+  step_corr(all_predictors()) %>%
+  step_normalize(all_predictors(), -all_outcomes()) %>% 
+  prep()
+
+## Set up testing data
+testing_data <- model_recipe %>%
+  bake(testing(split_data)) 
+
+n_test = nrow(testing_data)
+
+## Set up training data (dont need to bake because set up in recipe)
+training_data <- juice(model_recipe)
+
+## Set seed for before making model
+set.seed(42)
+
+## Make the actual model
+rf_model <- rand_forest(trees = ntree, mtry = m_try, mode = "regression") %>%
+  set_engine(model) %>%
+  fit(dep ~ ., data = training_data)
+
+## Calculate predicted variables
+model_fit <- testing_data %>% 
+  mutate(predict(rf_model, testing_data)) 
+
+## Calculate metrics to assess model performance
+hydroGOF::NSE(model_fit$.pred, model_fit$dep)
+
+
 ## This function calculates fit and error metrics (R2adj, NSE, MAE) using
 ## random sampling to split into training and test datasets
 calculate_initial_metrics_oob <- function(data = data, 
@@ -67,7 +119,7 @@ calculate_initial_metrics_oob <- function(data = data,
   
   ## Set up recipe
   model_recipe <- training(split_data) %>% 
-    dplyr::select(-datetime_round) %>% 
+    dplyr::select(-datetime_round, -{{var}}) %>% 
     recipe(dep ~ .) %>% 
     step_integer(site) %>% 
     step_corr(all_predictors()) %>%
@@ -140,7 +192,7 @@ calculate_initial_metrics_nrs <- function(data = data,
   
   ## Set up recipe
   model_recipe <- training(split_data) %>% 
-    dplyr::select(-datetime_round) %>% 
+    dplyr::select(-datetime_round, -{{var}}) %>% 
     recipe(dep ~ .) %>% 
     step_integer(site) %>% 
     step_corr(all_predictors()) %>%
@@ -192,7 +244,7 @@ calculate_initial_metrics_nrs <- function(data = data,
                   n_test = n_test)
 }
 
-n = 2
+n = 10
 tic("run models")
 models_oob <- model_list %>% 
   #slice(1:n) %>% 

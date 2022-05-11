@@ -43,3 +43,7 @@ vignettes/*.pdf
 writing/
 
 data/created/
+
+X-*
+
+X_*
