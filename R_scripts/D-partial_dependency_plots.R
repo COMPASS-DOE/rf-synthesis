@@ -4,7 +4,7 @@
 ## use in constructing figures. 
 ## 
 ## Peter Regier
-## 2022-04-07
+## 2022-04-07 (Updated 2022-05-13)
 
 # 1. Setup ---------------------------------------------------------------------
 
@@ -137,7 +137,6 @@ calculate_pdp_test <- function(data = data,
   return(pdp_rf)
 }
 
-
 n = 10
 tic("run models")
 pdp_raw <- model_list_pdp %>% 
@@ -150,20 +149,9 @@ pdp <- pdp_raw %>%
   mutate(x = (`_x_` * sd_x) + mean_x) %>% 
   mutate(predictor = `_vname_`)
 
-plot_pdp <- function(var, color_var, xlab){
-  pdp %>% 
-    filter(predictor == var) %>% 
-    ggplot(aes(x, dep, group = model_no, color = as.factor({{color_var}}))) + 
-    geom_line() +
-    facet_wrap(~data, scales = "free") + 
-    labs(x = xlab, y = "NO3 (mg/L)", color = "mtry")
-}
+write_csv(pdp, "data/created/pdp_data.csv")
 
-plot_grid(plot_pdp("SpCond", m_try, "Sp. Cond (mS/cm)"), 
-          plot_pdp("sin_doy", m_try, "Sine DOY"), 
-          plot_pdp("Temp", m_try, "Temp. (C)"), 
-          ncol = 1)
-ggsave("figures/D-pdps.pdf", width = 6, height = 8)
+
 
 
 
