@@ -182,7 +182,7 @@ ggsave("figures/5-pdps.pdf", width = 9, height = 5)
 
 var_comparison <- read_csv("data/created/variable_combo_model_metrics.csv") %>% 
   mutate(includes_spcond = str_detect(predictors, pattern = "SpCond"), 
-         includes_doy = str_detect(predictors, pattern = "sin_doy")) 
+         includes_turb = str_detect(predictors, pattern = "Turb")) 
 
 
 cbv_var_comparison_plot <- var_comparison %>% 
@@ -195,10 +195,10 @@ cbv_var_comparison_plot <- var_comparison %>%
 
 owc_var_comparison_plot <- var_comparison %>% 
   filter(data == "owc_data") %>% 
-  ggplot(aes(as.factor(n_predictors), nse, fill = includes_doy)) + 
+  ggplot(aes(as.factor(n_predictors), nse, fill = includes_turb)) + 
   geom_boxplot() + 
   scale_fill_manual(values = c("gray", wq_colors[4])) + 
-  labs(x = "Number of predictors", y = "NSE", fill = "Includes \n DOY") + 
+  labs(x = "Number of predictors", y = "NSE", fill = "Includes \n Turbidity") + 
   theme(legend.position = c(0.8, 0.3), legend.background = element_blank())
 
 plot_grid(cbv_var_comparison_plot, 

@@ -15,11 +15,10 @@
 ##
 ## Data are labeled as CBV (Chesapeake Bay Virginia) or OWC (Old Woman Creek)
 ##
-##
 ## Authors: Peter Regier and Matt Duggan
 ##
 ## Date Created: 2021-05-27
-## Updated: 2022-03-30
+## Laste Updated: 2022-08-22
 ##
 ## Email: peter.regier@pnnl.gov
 ##
@@ -134,17 +133,15 @@ toc()
   
   # Write out data for models
   write_csv(cbv_combined %>% filter(!is.na(datetime_round)) %>% 
-              mutate(sin_doy = sin(yday(lubridate::date(datetime_round)) / (365.25 * pi))) %>% 
+              mutate(sin_doy = sin((yday(lubridate::date(datetime_round)) / 365.25) * pi)) %>% 
               filter(no3 < 1), 
             paste0(filepath_out, "cbv_for_models.csv"))
   write_csv(owc_combined %>% filter(!is.na(datetime_round)) %>% 
-              mutate(sin_doy = sin(yday(lubridate::date(datetime_round)) / (365.25 * pi))), 
+              mutate(sin_doy = sin((yday(lubridate::date(datetime_round)) / 365.25) * pi)), 
             paste0(filepath_out, "owc_for_models.csv"))
   
   # Write out high-frequency data for use later
   write_csv(hf_cbv %>% filter(datetime_round >= "2002-01-01"), paste0(filepath_out, "cbv_hf_wq.csv"))
   write_csv(hf_owc %>% filter(datetime_round >= "2002-01-01"), paste0(filepath_out, "owc_hf_wq.csv"))
-
-
 
 

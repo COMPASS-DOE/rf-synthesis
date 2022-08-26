@@ -26,7 +26,7 @@ p_load(tidymodels,
 source("R_scripts/constants.R")
 
 # Functions used to create models
-source("R_scripts/functions_model.R")
+#source("R_scripts/functions_model.R")
 
 # Set the dependent variable to model
 var = "no3"
@@ -148,14 +148,13 @@ ggplot(x, aes(x = predictor, y = median_fi, fill = predictor)) +
   coord_flip() +
   facet_wrap(data~predictor_set, scales = "free") 
 
-  ggplot(x, 
-       aes(reorder(predictor, -median_fi, sum), fill = predictor)) + 
-  geom_col(aes(y = median_fi), show.legend = F) + 
-  geom_errorbar(aes(ymin = min_fi, ymax = max_fi), width = 0.2) + 
-  labs(x = "Predictor", y = "Feature Importance", title = title) + 
-  scale_x_discrete(limits=rev) + 
-  coord_flip() + 
-  theme(plot.title = element_text(hjust = 0.5)) + 
+ggplot(x,
+       aes(reorder(predictor, -median_fi, sum), fill = predictor)) +
+  geom_col(aes(y = median_fi), show.legend = F) +
+  geom_errorbar(aes(ymin = min_fi, ymax = max_fi), width = 0.2) +
+  labs(x = "Predictor", y = "Feature Importance", title = title) +
+  scale_x_discrete(limits=rev) +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~predictor_set)
-
-
+  

@@ -27,7 +27,7 @@ p_load(tidymodels,
 source("R_scripts/constants.R")
 
 # Functions used to create models
-source("R_scripts/functions_model.R")
+#source("R_scripts/functions_model.R")
 
 # Set the dependent variable to model
 var = "no3"
@@ -192,7 +192,7 @@ calculate_initial_metrics_nrs <- function(data = data,
                   n_test = n_test)
 }
 
-n = 10
+#n = 10
 tic("run models")
 models_oob <- model_list %>% 
   pmap(calculate_initial_metrics_oob) %>% #pmap applies the function to each row

@@ -27,7 +27,7 @@ p_load(tidymodels,
 source("R_scripts/constants.R")
 
 # Functions used to create models
-source("R_scripts/functions_model.R")
+# source("R_scripts/functions_model.R")
 
 # Set the dependent variable to model
 var = "no3"
@@ -46,7 +46,7 @@ owc_data <- read_csv("data/created/owc_for_models.csv") %>%
 # 3. Set up models for all variables of interest -------------------------------
 
 ## First, create a list of variables to calculate PDPs for
-pdp_var = c("SpCond", "sin_doy", "Temp")
+pdp_var = c("SpCond", "sin_doy", "Turb")
 
 ## Second, create a modified model_list
 model_list_pdp <- expand_grid(model_list, pdp_var) %>% 
