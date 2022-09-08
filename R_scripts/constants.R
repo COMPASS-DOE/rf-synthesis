@@ -44,9 +44,9 @@ theme_set(theme_bw())
 datasets = c("cbv_data", "owc_data")
 model_packages = c("randomForest", "ranger")
 predictors = c("wq_predictors", "met_predictors", "all_predictors")
-proportion = c(0.7, 0.8, 0.9) #will add more if useful
-m_try = c(2, 3, 4)
-ntree = c(100, 500, 1000)
+proportion = c(0.5, 0.6, 0.7, 0.8, 0.9, 0.95) #will add more if useful
+m_try = c(1, 2, 3, 4, 5, 6)
+ntree = c(10, 50, 100, 500, 1000, 5000)
 
 ## Assemble a table of  the initial models to be run
 model_list <- tibble(expand.grid(data = datasets,

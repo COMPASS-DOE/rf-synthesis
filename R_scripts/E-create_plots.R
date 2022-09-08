@@ -24,7 +24,8 @@ source("R_scripts/constants.R")
 # 2. Create Figure 1 (NRS v OOB) -----------------------------------------------
 
 ## First, read in data
-metrics <- read_csv("data/created/model_metrics.csv")
+metrics <- read_csv("data/created/model_metrics.csv") %>% 
+  mutate(predictors = str_to_upper(str_remove(predictors, "_predictors")))
 cbv_data <- read_csv("data/created/cbv_for_models.csv")
 owc_data <- read_csv("data/created/owc_for_models.csv")
 
@@ -61,8 +62,9 @@ nrs_v_oob_plot <- ggplot(metrics, aes(dataset, nse, fill = split)) +
        y = "NSE", 
        fill = "Split \n strategy") + 
   scale_fill_manual(values = dataset_colors) + 
+  stat_compare_means(aes(label = ..p.signif..)) +
   theme(legend.title = element_text(hjust = 0.5), 
-        legend.position = c(0.3, 0.2), 
+        legend.position = c(0.4, 0.2), 
         legend.background = element_blank(), 
         legend.key = element_rect(colour = "transparent", fill = "white"))
 
@@ -71,34 +73,40 @@ plot_grid(plot_grid(oob_ts_plot, nrs_ts_plot, ncol = 1, labels = c("a", "b")),
 ggsave("figures/1-OOB_v_NRS.pdf", width = 10, height = 4)
 
 
+
 # 3. Create Figure 3 (parameter boxplots) --------------------------------------
 
 myboxplot <- function(my_factor, var, ylab, my_title){
   
-  colors = c("#292F36", "#84DCC6", "#2D82B7")
+  colors = c("#292F36", "#84DCC6", "#2D82B7", "#FF2E00", "#FEA82F", "#E5DADA")
+  
+  ymin = min(metrics %>% select({{var}}))
+  
   ggplot(metrics, 
          aes(x = data, y = {{var}}, fill = as.factor({{my_factor}}))) + 
     geom_boxplot(alpha = 0.9, color = "#0D0E23") + 
     labs(x = "", y = ylab, title = my_title, fill = "") + 
     scale_x_discrete(labels = c("CBV", "OWC")) + 
+    scale_y_continuous(limits = c(ymin, 1)) + 
     scale_fill_manual(values = colors) + 
     stat_compare_means(aes(label = ..p.signif..)) +
-    theme(legend.position = c(0.3, 0.2), 
-          legend.background = element_blank(),
-          legend.key = element_rect(fill="transparent"),
-          plot.title = element_text(hjust = 0.5))
+    theme(#legend.position = c(0.3, 0.2), 
+      legend.position='bottom',
+      legend.background = element_blank(),
+      legend.key = element_rect(fill="transparent"),
+      plot.title = element_text(hjust = 0.5))
 }
 
 plot_grid(myboxplot(predictors, nse, "NSE", "Predictor variables"), 
-          myboxplot(model, nse, "NSE", "Model package"), 
-          myboxplot(proportion, nse, "NSE", "Train:test dataset ratio"), 
-          myboxplot(m_try, nse, "NSE", "Variables per split"), 
-          myboxplot(ntree, nse, "NSE", "No. of trees"), 
-          nrow = 1, labels = c("a", "b", "c", "d", "e"))
-ggsave("figures/3-metrics.pdf", width = 13, height = 4)
+          myboxplot(model, nse, "", "Model package"),
+          myboxplot(proportion, nse, "", "Train:test dataset ratio"), 
+          myboxplot(m_try, nse, "", "Variables per split"), 
+          myboxplot(ntree, nse, "", "No. of trees"), 
+          nrow = 1, labels = c("a", "b", "c", "d", "e"), align = "hv")
+ggsave("figures/3-metrics.pdf", width = 13, height = 5)
 
 
-# 4. Create Figure 4 -------------------------------------------------------------
+# 4. Create Figure 4 (feature importance) --------------------------------------
 
 ## First, read in data
 fi_data <- read_csv("data/created/model_feature_importance.csv")
@@ -146,6 +154,9 @@ plot_grid(cbv_fi, owc_fi, nrow = 1, labels = c("a", "b"))
 ggsave("figures/4-feature_importance.pdf", width = 6.5, height = 4)
 
 
+
+
+
 # 5. Create Figure 5 (PDPs) ----------------------------------------------------
 
 ## Read in pdp data
@@ -171,9 +182,9 @@ plot_pdp <- function(var, xlab){
     labs(x = xlab, y = "", color = "mtry")
 }
 
-plot_grid(plot_pdp("SpCond", "SpCond") + ylab("Nitrate (mg/L)"), 
-          plot_pdp("sin_doy", "DOY"), 
-          plot_pdp("Temp", "Temp. (C)"), 
+plot_grid(plot_pdp("SpCond", "SpCond") + ylab("Nitrate (mg/L)"),
+          plot_pdp("Temp", "Temp. (C)"),
+          plot_pdp("sin_doy", "DOY"),
           nrow = 1, labels = c("a", "b", "c"))
 ggsave("figures/5-pdps.pdf", width = 9, height = 5)
 
@@ -182,7 +193,7 @@ ggsave("figures/5-pdps.pdf", width = 9, height = 5)
 
 var_comparison <- read_csv("data/created/variable_combo_model_metrics.csv") %>% 
   mutate(includes_spcond = str_detect(predictors, pattern = "SpCond"), 
-         includes_turb = str_detect(predictors, pattern = "Turb")) 
+         includes_temp = str_detect(predictors, pattern = "Temp")) 
 
 
 cbv_var_comparison_plot <- var_comparison %>% 
@@ -195,10 +206,10 @@ cbv_var_comparison_plot <- var_comparison %>%
 
 owc_var_comparison_plot <- var_comparison %>% 
   filter(data == "owc_data") %>% 
-  ggplot(aes(as.factor(n_predictors), nse, fill = includes_turb)) + 
+  ggplot(aes(as.factor(n_predictors), nse, fill = includes_temp)) + 
   geom_boxplot() + 
   scale_fill_manual(values = c("gray", wq_colors[4])) + 
-  labs(x = "Number of predictors", y = "NSE", fill = "Includes \n Turbidity") + 
+  labs(x = "Number of predictors", y = "NSE", fill = "Includes \n Temp") + 
   theme(legend.position = c(0.8, 0.3), legend.background = element_blank())
 
 plot_grid(cbv_var_comparison_plot, 
@@ -216,19 +227,19 @@ table1 <- tibble(Parameter = c("Predictor variables",
                                "Number of trees (ntree)"), 
                  Levels = c("water quality, meteorology, both", 
                             "randomForest, ranger", 
-                            "0.7, 0.8, 0.9", 
-                            "2, 3, 4", 
-                            "100, 500, 1000"), 
+                            "0.5, 0.6, 0.7, 0.8, 0.9, 0.95", 
+                            "1, 2, 3, 4, 5, 6", 
+                            "10, 50, 100, 500, 1000, 5000"), 
                  Rationale = c("Random forests only use a subset of predictors for each tree", 
                                "Different packages use different implementations and default parameters", 
                                "The ratio can influence over-fitting or under-fitting", 
                                "The number of variables for each split influence what data a tree receives", 
                                "Represents a trade-off between model performance and computational time"))
 
-table1 %>% kbl(caption = "Table 1: Parameters manipulated", align = 'c') %>%
+table1 %>% kbl(caption = "Table 1: Parameter decisions", align = 'c') %>%
   kable_classic(full_width = F, html_font = "Times New Roman") %>%
-  column_spec(1, width = "10em") %>% 
-  column_spec(2, width = "10em") %>% 
+  column_spec(1, width = "15em") %>% 
+  column_spec(2, width = "15em") %>% 
   column_spec(3, width = "15em") %>% 
   row_spec(0, bold = TRUE) %>% 
   save_kable("figures/Table1-parameters.pdf")
@@ -254,55 +265,47 @@ ggsave("figures/S1-nitrate_by_month.pdf", width = 4, height = 5)
 # 9. Create Figure S2 ----------------------------------------------------------
 
 ## Create an analogous series of plots to Figure 3, but for MAE
-plot_mae <- plot_grid(myboxplot_p(predictors, mae, "MAE", "Predictor variables") +
+plot_mae <- plot_grid(myboxplot(predictors, mae, "MAE", "Predictor variables") +
                          theme(legend.position = "none"), 
-                       myboxplot_p(model, mae, "MAE", "Model package") +
+                       myboxplot(model, mae, "MAE", "Model package") +
                          theme(legend.position = "none"), 
-                       myboxplot_p(proportion, mae, "MAE", "Train:test dataset ratio") +
+                      myboxplot(proportion, mae, "MAE", "Train:test dataset ratio") +
                          theme(legend.position = "none"), 
-                       myboxplot_p(m_try, mae, "MAE", "Variables per split") +
+                      myboxplot(m_try, mae, "MAE", "Variables per split") +
                          theme(legend.position = "none"), 
-                       myboxplot_p(ntree, mae, "MAE", "No. of trees") +
+                      myboxplot(ntree, mae, "MAE", "No. of trees") +
                          theme(legend.position = "none"), 
                        nrow = 1)
 
 ## Create an analogous series of plots to Figure 3, but for RMSE
-plot_rmse <- plot_grid(myboxplot_p(predictors, rmse, "RMSE", "Predictor variables") +
+plot_rmse <- plot_grid(myboxplot(predictors, rmse, "RMSE", "Predictor variables") +
                         theme(legend.position = c(0.3, 0.3)), 
-                       myboxplot_p(model, rmse, "RMSE", "Model package") +
+                       myboxplot(model, rmse, "RMSE", "Model package") +
                         theme(legend.position = c(0.3, 0.3)), 
-                       myboxplot_p(proportion, rmse, "RMSE", "Train:test dataset ratio") +
+                       myboxplot(proportion, rmse, "RMSE", "Train:test dataset ratio") +
                         theme(legend.position = c(0.3, 0.3)), 
-                       myboxplot_p(m_try, rmse, "RMSE", "Variables per split") +
+                       myboxplot(m_try, rmse, "RMSE", "Variables per split") +
                         theme(legend.position = c(0.3, 0.3)), 
-                       myboxplot_p(ntree, rmse, "RMSE", "No. of trees") +
+                       myboxplot(ntree, rmse, "RMSE", "No. of trees") +
                         theme(legend.position = c(0.3, 0.3)), 
                        nrow = 1)
 
 ## Create an analogous series of plots to Figure 3, but for R2
-plot_r2 <- plot_grid(myboxplot_p(predictors, r2, "R2", "Predictor variables") +
+plot_r2 <- plot_grid(myboxplot(predictors, r2, "R2", "Predictor variables") +
                        theme(legend.position = "none"), 
-                      myboxplot_p(model, r2, "R2", "Model package") +
+                     myboxplot(model, r2, "R2", "Model package") +
                        theme(legend.position = "none"), 
-                      myboxplot_p(proportion, r2, "R2", "Train:test dataset ratio") +
+                     myboxplot(proportion, r2, "R2", "Train:test dataset ratio") +
                        theme(legend.position = "none"), 
-                      myboxplot_p(m_try, r2, "R2", "Variables per split") +
+                     myboxplot(m_try, r2, "R2", "Variables per split") +
                        theme(legend.position = "none"), 
-                      myboxplot_p(ntree, r2, "R2", "No. of trees") +
+                     myboxplot(ntree, r2, "R2", "No. of trees") +
                        theme(legend.position = "none"), 
                       nrow = 1)
 
 ## Create Figure S2 and export
 plot_grid(plot_r2, plot_mae, plot_rmse, ncol = 1)
 ggsave("figures/S2-all_metrics.pdf", width = 13, height = 12)
-
-
-my_comparisons = list(c("all_predictors", "met_predictors"), 
-                c("all_predictors", "wq_predictors"), 
-                c("wq_predictors", "met_predictors"))
-
-myboxplot(ntree, "Predictor variables") + 
-  stat_compare_means(aes(label = ..p.signif..))
 
 
 # 10. Create Table S1 ----------------------------------------------------------

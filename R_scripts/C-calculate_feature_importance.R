@@ -133,21 +133,30 @@ feature_importance <- model_list %>%
   pmap(calculate_feature_importance) %>% #pmap applies the function to each row
   bind_rows() %>% #recombine output into a single dataset 
   mutate(dataset = toupper(substr(data, 1, 3)))
+toc()
+
+# 3. Write out data and preview results ----------------------------------------
 
 ## Write out data
 write_csv(feature_importance, "data/created/model_feature_importance.csv")
 
+## Set up data for plotting
 x <- feature_importance %>%
   group_by(predictor, data, predictor_set) %>% 
   summarize(median_fi = median(fi), 
             min_fi = min(fi), 
             max_fi = max(fi)) 
 
-ggplot(x, aes(x = predictor, y = median_fi, fill = predictor)) + 
-  geom_col(show.legend = F) + 
+## Preview Figure 4
+x %>% 
+  filter(predictor_set == "wq_predictors") %>% 
+ggplot(aes(x = predictor, y = median_fi, fill = predictor)) + 
+  geom_col(aes(y = median_fi), show.legend = F) +
+  geom_errorbar(aes(ymin = min_fi, ymax = max_fi), width = 0.2) +
   coord_flip() +
   facet_wrap(data~predictor_set, scales = "free") 
 
+## Create a different preview plot
 ggplot(x,
        aes(reorder(predictor, -median_fi, sum), fill = predictor)) +
   geom_col(aes(y = median_fi), show.legend = F) +

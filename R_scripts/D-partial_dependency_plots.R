@@ -46,7 +46,7 @@ owc_data <- read_csv("data/created/owc_for_models.csv") %>%
 # 3. Set up models for all variables of interest -------------------------------
 
 ## First, create a list of variables to calculate PDPs for
-pdp_var = c("SpCond", "sin_doy", "Turb")
+pdp_var = c("SpCond", "sin_doy", "Temp")
 
 ## Second, create a modified model_list
 model_list_pdp <- expand_grid(model_list, pdp_var) %>% 
@@ -147,10 +147,11 @@ pdp_raw <- model_list_pdp %>%
 
 pdp <- pdp_raw %>% 
   mutate(x = (`_x_` * sd_x) + mean_x) %>% 
-  mutate(predictor = `_vname_`)
+  rename("predictor" = `_vname_`) %>% 
+  select(-`_label_`)
 
 write_csv(pdp, "data/created/pdp_data.csv")
-
+toc()
 
 
 
