@@ -70,7 +70,7 @@ nrs_v_oob_plot <- ggplot(metrics, aes(dataset, nse, fill = split)) +
 
 plot_grid(plot_grid(oob_ts_plot, nrs_ts_plot, ncol = 1, labels = c("a", "b")), 
           nrs_v_oob_plot, nrow = 1, rel_widths = c(1, 0.5), labels = c("", "c"))
-ggsave("figures/1-OOB_v_NRS.pdf", width = 10, height = 4)
+ggsave("figures/2-OOB_v_NRS.pdf", width = 10, height = 4)
 
 
 
@@ -96,6 +96,7 @@ myboxplot <- function(my_factor, var, ylab, my_title){
       legend.key = element_rect(fill="transparent"),
       plot.title = element_text(hjust = 0.5))
 }
+
 
 plot_grid(myboxplot(predictors, nse, "NSE", "Predictor variables"), 
           myboxplot(model, nse, "", "Model package"),
@@ -153,6 +154,10 @@ owc_fi <- make_fi_plot(fi_stats_renamed %>% filter(data == "owc_data"), "OWC dat
 plot_grid(cbv_fi, owc_fi, nrow = 1, labels = c("a", "b"))
 ggsave("figures/4-feature_importance.pdf", width = 6.5, height = 4)
 
+tiff("figures/4-feature_importance.tiff", 
+     units = "in", width = 6.5, height = 4, res = 300)
+plot_grid(cbv_fi, NULL, owc_fi, nrow = 1, rel_widths = c(1, 0.1, 1))
+dev.off()
 
 
 
